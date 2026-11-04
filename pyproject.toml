@@ -1,7 +1,7 @@
 [project]
 name = "openbatterycell"
 version = "0.1.0"
-description = "Learn how a battery cell works: electrode potentials, series and parallel packs, the Nernst equation and discharge, in 3 sessions."
+description = "Learn how a battery cell works: electrode potentials, series and parallel packs, the Nernst equation, discharge and a cold-proof lamp pack, in 4 sessions."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }

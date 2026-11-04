@@ -10,7 +10,7 @@
 \setlength{\parindent}{0pt}
 \begin{document}
 
-\begin{center}{\LARGE\bfseries openbatterycell}\\[0.4em]{\large Build and size an electrochemical cell for a target voltage, in three sessions.}\\[0.2em]\small PAN IIT OSS explainer \textbullet{} secondary school to diploma / undergraduate (levels 3-5)\end{center}
+\begin{center}{\LARGE\bfseries openbatterycell}\\[0.4em]{\large Build and size an electrochemical cell for a target voltage, in four sessions.}\\[0.2em]\small PAN IIT OSS explainer \textbullet{} secondary school to diploma / undergraduate (levels 3-5)\end{center}
 
 \section*{Why this exists}
 A battery cell turns the chemical difference between two metals into an electric voltage. This explainer follows the cell from a lemon to a simulation: electrode potentials, series and parallel packs, Faraday's law and the Nernst equation, using only arithmetic and a little calculus.
@@ -18,11 +18,12 @@ A battery cell turns the chemical difference between two metals into an electric
 \section*{The end goal}
 Build and size an electrochemical cell for a target voltage. The end goal is to build and size an electrochemical cell for a target voltage and to understand how it behaves as it is used: voltage, capacity, internal resistance, power and heat. The same ideas underlie every battery from a torch cell to a grid store, but this is an educational model, not a design tool, and real lithium and lead-acid batteries can be dangerous.
 
-\section*{How the three sessions build up}
+\section*{How the four sessions build up}
 \begin{enumerate}[nosep]
 \item \textbf{Session 1: Two metals make a cell} (Level 1, conceptual interactive model, 60 min).
 \item \textbf{Session 2: Voltage, capacity and Faraday's law} (Level 2, mathematical engineering model, 75 min).
 \item \textbf{Session 3: A cell that runs down} (Level 3, simulation and validation, 90 min).
+\item \textbf{Session 4: A cold-proof lamp pack} (Level 3, simulation and validation, 90 min).
 \end{enumerate}
 
 \section{Session 1: Two metals make a cell}
@@ -190,12 +191,45 @@ A Daniell cell starts with [Zn2+] = 0.10 mol/L and [Cu2+] = 1.0 mol/L at 25 C. F
 \item \textbf{Design and optimisation challenge.} Design a short-circuit safety limit: a cell has E = 1.10 V and r = 0.05 ohm. A short gives I = 22 A and 24.2 W. Find the series resistance that limits the heat made inside the cell to 2 W, and say why this is not a substitute for a proper fuse.
 \end{enumerate}
 
+\section{Session 4: A cold-proof lamp pack}
+
+\subsection*{A. Real-world problem}
+A small lamp behaves like a 30 ohm resistor and needs at least 9 V for at least 5 hours. The smallest pack of our zinc-copper cells that does the job at 25 C has 20 cells (10 in series in each string, 2 strings in parallel). Carry it outside at 0 C and the lamp never reaches 9 V. Why, how big must the pack be to work on a cold day, and what can a designer do so that it need not be that big? All cell numbers are illustrative; this is general education, not a method for building a real battery pack.
+
+\subsection*{B. Concept and theory}
+Cold slows the ions, so the internal resistance rises: $r(T)/r(25\,^\circ\mathrm{C})=\exp[(E_A/R)(1/T-1/T_0)]$ with the illustrative $E_A=20$ kJ/mol. The factor is 2.09 at 0 C, 2.92 at $-10$ C and 0.60 at 45 C, while the open-circuit voltage hardly changes (1.1271 V against 1.1296 V), so the lamp dims because of the resistance. A pack with $n_s$ cells in series and $n_p$ strings in parallel feeding a lamp $R$ carries $i=E/(R_{\mathrm{eq}}+r)$ in each string with $R_{\mathrm{eq}}=Rn_p/n_s$: it is one cell feeding $R_{\mathrm{eq}}$, and the lamp stays above $v_{\min}$ exactly while that cell's terminal voltage stays above $v_{\min}/n_s$. A pack fails at the start (the first lamp voltage is below 9 V) or early (the cutoff comes after a few hours). A design works if the lamp stays at or above 9 V for 5 h at every ambient temperature, and the search returns the smallest such pack or says none exists in the range.
+
+\begin{equation*}
+i=\frac{E}{R_{\mathrm{eq}}+r},\qquad R_{\mathrm{eq}}=\frac{R\,n_p}{n_s},\qquad v_{\mathrm{lamp}}=n_s\,i\,R_{\mathrm{eq}},\qquad t=\int_0^{q_{\mathrm{cut}}}\frac{dq}{i(q)}
+\end{equation*}
+
+\begin{center}\includegraphics[width=0.85\linewidth]{figures/s04_cold_pack.png}\\\small Left: lamp voltage of the 10 x 2 pack at 25, 0 and 45 C. Middle: cells in the smallest working pack against ambient temperature, plain and with two levers. Right: runtime against ambient temperature for three packs.\end{center}
+
+\subsection*{E. Worked example}
+\begin{enumerate}[nosep]
+\item The factor at 0 C is $\exp(0.738)=2.093$, so a fresh cell has $0.8\times2.093\times1.05=1.758$ ohm (0.840 ohm at 25 C).
+\item The 10 x 2 pack is one cell feeding $R_{\mathrm{eq}}=30\times2/10=6$ ohm. At 25 C the lamp voltage is $10\times1.1296\times6/(6+0.840)=9.91$ V.
+\item At 0 C: $10\times1.1271\times6/(6+1.758)=8.72$ V, below 9 V, so the runtime is 0 h (a start failure).
+\item With 12 in series, $R_{\mathrm{eq}}=5$ ohm and $v=10.01$ V; the 12 x 2 = 24 cell pack runs 5.60 h at 0 C, 5.62 h at 25 C and 5.37 h at 45 C. No pack of fewer than 24 cells works at all three temperatures (39 of 78 packs work).
+\item A cell with 30 percent lower resistance (0.56 ohm, an assumption) needs only 11 x 2 = 22 cells (5.88 h at 0 C); a pack held 5 K warm also needs 22; both levers need 20.
+\end{enumerate}
+\textbf{Answer.} The 20-cell pack gives 0 h at 0 C because the lamp starts at 8.72 V. The smallest pack for 0, 25 and 45 C is 24 cells, or 22 with either lever. An independent Runge-Kutta solver and the single-cell equivalent agree with the pack model to better than 0.002 h.
+
+\subsection*{F. Questions}
+\begin{enumerate}[nosep]
+\item \textbf{Conceptual.} A cold cell has almost the same open-circuit voltage as a warm one, yet the 20-cell pack lights the lamp at 25 C and not at 0 C. What changes, which kind of failure is it, and what cures it?
+\item \textbf{Numerical.} Find the internal resistance of a fresh cell at 0 C and the lamp voltage at the start of the 10 x 2 pack at 0 C ($E=1.1271$ V).
+\item \textbf{Graph and simulation interpretation.} In the right panel the 10 x 2 curve stays at 0 h up to about 5 C and then rises steeply, while the 12 x 2 curve rises earlier and then slowly falls above about 8 C. What limits each curve?
+\item \textbf{Design and optimisation challenge.} Choose between 24 plain cells, 22 cells with a 30 percent lower resistance and 22 plain cells held 5 K warm, compare them at 0, 25 and 45 C, and say what the model leaves out for each.
+\end{enumerate}
+
 \section{Real-world mini-project}
 \textbf{Design a battery pack for a small light with a runtime requirement.} A small lamp behaves like a 30 ohm resistor and needs at least 9.0 V across it for at least 5 hours. Your cells are the Session 3 zinc-copper cell (1.072 Ah each, illustrative parameters). A pack has ns cells in series per string and npar identical strings in parallel. Use \texttt{pack\_runtime\_hours(ns, npar, 30.0, 9.0)} from Session 3 and find the pack with the fewest cells that meets the requirement. Then repeat at 0 C (set T = 273.15) and say what changes. This is an educational model: never build a pack of real lithium or lead-acid cells from a simulation.
 
+\textbf{Design a lamp pack that works in the cold (classroom exercise only).} The 30 ohm lamp needs 9 V for 5 h at 0, 25 and 45 C. Plain Session 3 cells need 12 x 2 = 24 cells (5.60, 5.62 and 5.37 h). A cell with 30 percent lower resistance needs 11 x 2 = 22 cells (5.88, 5.81 and 5.65 h), a pack held 5 K warm needs 11 x 2 = 22 cells (5.37, 5.89 and 5.72 h), and both together need 10 x 2 = 20 cells (5.36, 6.14 and 6.08 h). The 20-cell pack from Session 3 works only from 15.1 C upwards; the 12 x 2 pack works down to $-3.8$ C. This is a teaching exercise with illustrative cells, not a method for building a real pack.
+
 \section{The path ahead}
 \begin{enumerate}[nosep]
-\item \textbf{Session 4: Cold-proof lamp pack.} A pack design routine that checks the lamp requirement at 0, 25 and 45 C and picks the smallest pack that works everywhere.
 \item \textbf{Session 5: Pulse loads and recovery.} A surface-concentration state with a relaxation time that feeds the Nernst term, driven by a load that has pulses.
 \item \textbf{Session 6: Rechargeable cell and cycle life.} A charge-discharge cycle simulation with a small loss of capacity per cycle.
 \item \textbf{Session 7: Heat feeds back on resistance.} A discharge simulation where the temperature changes in time instead of being fixed.
@@ -226,6 +260,14 @@ A Daniell cell starts with [Zn2+] = 0.10 mol/L and [Cu2+] = 1.0 mol/L at 25 C. F
 \item \textbf{Numerical.} Hint: R = r. I = E / (R + r). P = I\textasciicircum{}2 R. Solution: R = 0.8 ohm. I = 1.10 / 1.6 = 0.6875 A. P = 0.6875\textasciicircum{}2 x 0.8 = 0.378 W (= E\textasciicircum{}2 / (4 r) = 1.21 / 3.2 = 0.378 W). Heat in the cell = I\textasciicircum{}2 r = 0.378 W too, so the efficiency is 50 percent. Units: ohm, ampere, watt.
 \item \textbf{Graph and simulation interpretation.} Hint: Compare the starting terminal voltages 0.795, 1.042 and 1.106 V and the capacities 0.873, 0.996 and 1.043 Ah. Solution: The 40 ohm load starts highest (1.106 V) and gives the most usable capacity (1.043 Ah) because it draws only 0.028 A, so the drop I r inside the cell is small. The 2 ohm load draws 0.398 A, so about 0.33 V is lost inside the cell and it starts at 0.795 V. Its resistance rises as the copper runs out, and the large current makes the knee arrive earlier, so only 0.873 Ah is available before a 10 percent drop. A heavier load always gives less usable capacity in this model.
 \item \textbf{Design and optimisation challenge.} Hint: Heat in the cell is I\textasciicircum{}2 r, so I\_max = sqrt(2 / r). Then r + R\_s = E / I\_max. Solution: I\_max = sqrt(2 / 0.05) = 6.32 A. The total resistance must be at least E / I\_max = 1.10 / 6.32 = 0.174 ohm, so R\_s = 0.174 - 0.05 = 0.124 ohm. The resistor itself would then dissipate I\textasciicircum{}2 R\_s = 4.96 W and also wastes power in normal use. Assumptions: constant E and r, no heating feedback, no thermal runaway. A real design needs a rated fuse or protection circuit, a tested cell and professional advice; this model is for understanding only.
+\end{enumerate}
+
+\subsection*{Session 4}
+\begin{enumerate}[nosep]
+\item \textbf{Conceptual.} Hint: Compare the change in $E$ with the change in $r$. Solution: $E$ changes by 2 mV but $r$ rises from 0.840 to 1.758 ohm, so the lamp voltage falls from 9.91 V to 8.72 V, below 9 V from the first moment: a failure at the start. More cells in series (12 give 10.01 V) or a lower-resistance cell cures it; parallel strings share the current and also help.
+\item \textbf{Numerical.} Hint: $r=0.8\times$ factor $\times1.05$, then treat the pack as one cell feeding $R_{\mathrm{eq}}=30\times2/10$. Solution: the factor is $\exp(2405.4\times3.0697\times10^{-4})=2.093$, so $r=1.758$ ohm and $v=10\times1.1271\times6/(6+1.758)=8.72$ V, below 9 V.
+\item \textbf{Graph and simulation interpretation.} Hint: Use \texttt{pack\_report} to see whether the limit is the start or the cutoff. Solution: Below 4.6 C the 10 x 2 pack starts under 9 V (a start failure, 0 h); just above, it starts but runs short until the cells run out (5.95 h at 25 C). The 12 x 2 pack starts above 9 V from $-10.6$ C and meets 5 h from $-3.8$ C; above about 8 C its runtime falls slowly (5.82 h to 5.37 h at 45 C) because warmer cells have a lower resistance and the lamp draws more current and drains them faster.
+\item \textbf{Design and optimisation challenge.} Hint: Use \texttt{levers\_table()} and \texttt{coldest\_ok}. Solution: At 0, 25 and 45 C the plain 24 cells run 5.60, 5.62 and 5.37 h (work down to $-3.8$ C), the lower-resistance 22 cells 5.88, 5.81 and 5.65 h (down to $-7.8$ C), the warm 22 cells 5.37, 5.89 and 5.72 h (down to $-1.9$ C ambient). For a winter lamp the lower-resistance cell has the most margin, but the model does not know what 0.56 ohm costs; the warm pack ignores warm-up and a heater's energy.
 \end{enumerate}
 
 \section{How to join}

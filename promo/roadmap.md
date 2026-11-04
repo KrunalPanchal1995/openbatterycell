@@ -2,16 +2,6 @@
 
 This is the path, not the code. Each milestone says what you learn, what you build, and how you know it works. Pick one and open a pull request. See [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-## Session 4: Cold-proof lamp pack
-
-**You will learn:** How low temperature raises internal resistance and what a designer does about it.
-
-**You will build:** A pack design routine that checks the lamp requirement at 0, 25 and 45 C and picks the smallest pack that works everywhere.
-
-**Checkpoint (not met by the shipped code):** A design that keeps the 30 ohm lamp at 9 V or more for 5 h at 0 C with fewer than 24 cells (the shipped model needs 24 cells, 12 x 2, and the 25 C winner of 20 cells gives 0 h at 0 C).
-
-**Difficulty:** intermediate
-
 ## Session 5: Pulse loads and recovery
 
 **You will learn:** Why a cell sags under a heavy pulse and slowly recovers: a diffusion layer at the electrode with a time constant.
