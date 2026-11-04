@@ -245,6 +245,51 @@ def short_circuit_exact(E, r, C_th, hA, t, T_amb=25.0):
     return T_amb + heat / hA * (1.0 - np.exp(-np.asarray(t) * hA / C_th))
 
 
+# %% [markdown]
+# ## Step 6: many cycles, a little capacity lost each time
+# A rechargeable cell is discharged, recharged to full, discharged again. Each cycle permanently
+# loses a small fraction `loss` of the capacity that is left (0.2 percent per cycle is typical of
+# a modest cell; real fade is not constant). Because the loss is a *fraction of what remains*,
+# the capacity after n cycles is geometric:  f(n) = (1 - loss)^n.  After 50 cycles of 0.2 percent
+# that is 0.998^50 = 0.9047, i.e. 90.5 percent. (A loss of 0.2 percent of the *original*
+# capacity per cycle would give exactly 90.0 percent: the two differ because the second takes
+# the same bite every time.) An aged cell behaves like a smaller cell: the same voltage curve,
+# stretched shorter along the charge axis by f, so the usable capacity and the energy per
+# discharge both scale with f.
+
+# %%
+LOSS_PER_CYCLE = 0.002
+
+
+def capacity_fraction(n, loss=LOSS_PER_CYCLE):
+    """Capacity left after n cycles as a fraction of the new cell: (1 - loss)^n."""
+    return (1.0 - loss) ** np.asarray(n, dtype=float)
+
+
+def cycles_to_fraction(target=0.8, loss=LOSS_PER_CYCLE):
+    """Whole cycles after which the capacity first falls to `target` or below (end of life at 0.8)."""
+    if not 0.0 < loss < 1.0 or not 0.0 < target < 1.0:
+        raise ValueError("loss and target must lie strictly between 0 and 1")
+    return int(np.ceil(np.log(target) / np.log(1.0 - loss) - 1e-12))
+
+
+def cycle_life(R, n_cycles, loss=LOSS_PER_CYCLE, T=T0, r0=R_INT0, drop=0.10):
+    """Simulate n_cycles of discharge (to the `drop` cutoff) and full recharge, cycle by cycle.
+
+    Returns arrays: cycle number 1..n, capacity fraction at the start of each cycle, usable
+    capacity (Ah) and energy (Wh) delivered in that cycle. The fresh-cell numbers are computed once."""
+    ah0, wh0 = usable_capacity_ah(R, T, r0, drop), energy_wh(R, T, r0, drop)
+    frac = 1.0
+    cyc, fr, ah, wh = [], [], [], []
+    for k in range(1, int(n_cycles) + 1):
+        cyc.append(k)
+        fr.append(frac)
+        ah.append(ah0 * frac)
+        wh.append(wh0 * frac)
+        frac *= (1.0 - loss)             # recharge restores the starting concentrations, minus the permanent loss
+    return {"cycle": np.array(cyc), "fraction": np.array(fr), "ah": np.array(ah), "wh": np.array(wh)}
+
+
 # %%
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
@@ -313,6 +358,27 @@ if __name__ == "__main__":
     ax4.legend(fontsize=8)
     fig4.tight_layout()
     fig4.savefig(OUT / "short_circuit.png", dpi=120)
+
+    # figure 5: capacity over many cycles
+    ncyc = np.arange(0, 201)
+    fig5, ax5 = plt.subplots(figsize=(6.4, 4.2))
+    ax5.plot(ncyc, 100 * capacity_fraction(ncyc), color="#003f7f", lw=2, label="0.2 % of what is left per cycle")
+    ax5.plot(ncyc, 100 * (1 - LOSS_PER_CYCLE * ncyc), "--", color="#c86a00", label="0.2 % of the original per cycle")
+    ax5.axhline(80, color="gray", ls=":")
+    ax5.plot([50], [100 * capacity_fraction(50)], "o", color="#d81b60")
+    ax5.annotate(f"{100 * capacity_fraction(50):.1f} % after 50 cycles", (50, 100 * capacity_fraction(50)), (62, 93), fontsize=9)
+    n80 = cycles_to_fraction(0.8)
+    ax5.annotate(f"80 % after {n80} cycles", (n80, 80), (n80 + 8, 82), fontsize=9)
+    ax5.set_xlabel("cycle number")
+    ax5.set_ylabel("capacity (% of a new cell)")
+    ax5.set_title("Capacity fade: geometric loss against straight-line loss", fontsize=10)
+    ax5.set_ylim(60, 101)
+    ax5.grid(alpha=0.3)
+    ax5.legend(fontsize=8, loc="lower left")
+    fig5.tight_layout()
+    fig5.savefig(OUT / "capacity_fade.png", dpi=120)
+    cl = cycle_life(10.0, n80)
+    print(f"cycles to 80 %: {n80};  after 50 cycles: {100 * capacity_fraction(50):.2f} %;  10 ohm load: {cl['ah'][0]:.3f} Ah at cycle 1, {cl['ah'][49]:.3f} Ah at cycle 50;  energy over life to 80 %: {cl['wh'].sum():.1f} Wh")
 
     # numbers quoted in the lesson text
     for R in (2.0, 10.0, 40.0):

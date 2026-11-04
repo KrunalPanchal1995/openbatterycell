@@ -46,9 +46,9 @@
 </main>
 <script>
 "use strict";
-const PARAMS = [{"id": "R", "label": "Load resistance", "min": 0.1, "max": 40, "step": 0.1, "value": 10, "unit": "ohm"}, {"id": "r", "label": "Internal resistance (25 C)", "min": 0.2, "max": 2, "step": 0.1, "value": 0.8, "unit": "ohm"}, {"id": "Tc", "label": "Temperature", "min": 0, "max": 50, "step": 1, "value": 25, "unit": "C"}, {"id": "zn0", "label": "Starting Zn2+ concentration", "min": 0.01, "max": 1, "step": 0.01, "value": 0.1, "unit": "mol/L"}];
-const GRAPHS = [{"id": "discharge", "label": "Discharge curve"}, {"id": "power", "label": "Power versus load"}, {"id": "nernst", "label": "Nernst line"}];
-const PRESETS = [{"label": "Light load (40 ohm)", "values": {"R": 40, "r": 0.8, "Tc": 25, "zn0": 0.1}}, {"label": "Heavy load (2 ohm)", "values": {"R": 2, "r": 0.8, "Tc": 25, "zn0": 0.1}}, {"label": "Cold cell (0 C)", "values": {"R": 10, "r": 0.8, "Tc": 0, "zn0": 0.1}}, {"label": "Maximum power", "values": {"R": 0.8, "r": 0.8, "Tc": 25, "zn0": 0.1}}];
+const PARAMS = [{"id": "R", "label": "Load resistance", "min": 0.1, "max": 40, "step": 0.1, "value": 10, "unit": "ohm"}, {"id": "r", "label": "Internal resistance (25 C)", "min": 0.2, "max": 2, "step": 0.1, "value": 0.8, "unit": "ohm"}, {"id": "Tc", "label": "Temperature", "min": 0, "max": 50, "step": 1, "value": 25, "unit": "C"}, {"id": "zn0", "label": "Starting Zn2+ concentration", "min": 0.01, "max": 1, "step": 0.01, "value": 0.1, "unit": "mol/L"}, {"id": "loss", "label": "Capacity lost per cycle", "min": 0, "max": 1, "step": 0.05, "value": 0.2, "unit": "percent of what is left"}, {"id": "cyc", "label": "Number of cycles", "min": 0, "max": 300, "step": 1, "value": 50, "unit": "cycles"}];
+const GRAPHS = [{"id": "discharge", "label": "Discharge curve"}, {"id": "power", "label": "Power versus load"}, {"id": "nernst", "label": "Nernst line"}, {"id": "cycles", "label": "Capacity over cycles"}];
+const PRESETS = [{"label": "Light load (40 ohm)", "values": {"R": 40, "r": 0.8, "Tc": 25, "zn0": 0.1}}, {"label": "Heavy load (2 ohm)", "values": {"R": 2, "r": 0.8, "Tc": 25, "zn0": 0.1}}, {"label": "Cold cell (0 C)", "values": {"R": 10, "r": 0.8, "Tc": 0, "zn0": 0.1}}, {"label": "Maximum power", "values": {"R": 0.8, "r": 0.8, "Tc": 25, "zn0": 0.1}}, {"label": "Worn cell (0.5 % per cycle, 100 cycles)", "values": {"loss": 0.5, "cyc": 100}}];
 const CHALLENGE = "Choose the load resistance that draws the maximum power from the fresh cell, within 0.1 ohm (the effective internal resistance is 1.05 x r at 25 C).";
 const CHALLENGE_SOLUTION = {"R": 0.8, "r": 0.8, "Tc": 25, "zn0": 0.1};
 const challengeTest = CHALLENGE ? (p) => (Math.abs(p.R - 1.05 * p.r * Math.exp(20000 / 8.314462618 * (1 / (p.Tc + 273.15) - 1 / 298.15))) < 0.1) : null;
@@ -136,6 +136,19 @@ if (graph === "discharge") {
   curve(PR, A, C.accent, 0, 10, 240);
   dot(A, Math.min(p.R, 10), PR(Math.min(p.R, 10)), C.bad, "load");
   dot(A, Math.min(re, 10), Pm, C.good, "max power");
+} else if (graph === "cycles") {
+  const g = 1 - p.loss / 100, f = n => Math.pow(g, n), nmax = 300;
+  const A = axes({ x: [0, nmax], y: [0, 100], xl: "cycle number", yl: "capacity (% of a new cell)", title: "Capacity over cycles: geometric loss" }, C);
+  curve(n => 100 * (1 - p.loss / 100 * n), A, C.muted, 0, Math.min(nmax, p.loss > 0 ? 100 / p.loss : nmax), 120);
+  curve(n => 100 * f(n), A, C.accent, 0, nmax, 240);
+  curve(() => 80, A, C.line, 0, nmax, 2);
+  dot(A, p.cyc, 100 * f(p.cyc), C.bad, (100 * f(p.cyc)).toFixed(1) + " % now");
+  ctx.font = "12px system-ui"; ctx.textAlign = "left";
+  ctx.fillStyle = C.accent; ctx.fillText("blue: lose a fraction of what is left each cycle", A.L + 10, A.T + A.h - 30);
+  ctx.fillStyle = C.muted; ctx.fillText("grey: lose the same bite of the original each cycle", A.L + 10, A.T + A.h - 14);
+  ctx.fillStyle = C.muted; ctx.fillText("line at 80 %: usual end of life", A.L + A.w - 170, A.Y(80) - 6);
+  const n80 = p.loss > 0 ? Math.ceil(Math.log(0.8) / Math.log(g) - 1e-12) : null;
+  readout("after " + p.cyc + " cycles at " + p.loss.toFixed(2) + " % per cycle the cell holds " + (100 * f(p.cyc)).toFixed(2) + " % of its new capacity: " + (cap * f(p.cyc)).toFixed(3) + " Ah and " + (wh * f(p.cyc)).toFixed(3) + " Wh per discharge into " + p.R + " ohm" + (n80 === null ? "; no loss, no end of life" : "; it falls to 80 % after " + n80 + " cycles"));
 } else {
   const A = axes({ x: [-4, 5], y: [0.9, 1.25], xl: "log10 of Q = [Zn2+] / [Cu2+]", yl: "cell voltage E (V)", title: "Nernst: voltage falls one straight line as Q grows" }, C);
   curve(x => E0 - kt * Math.LN10 * x, A, C.accent, -4, 5, 2);
@@ -143,7 +156,7 @@ if (graph === "discharge") {
   const xe = Math.log10(cz(QE) / cc(QE));
   dot(A, xe, ocv(QE), C.bad, "end");
 }
-readout("start E = " + E.toFixed(3) + " V (" + slope.toFixed(1) + " mV per decade) &nbsp; r = " + re.toFixed(2) + " ohm &nbsp; I = " + I0.toFixed(3) + " A &nbsp; terminal V = " + v0.toFixed(3) + " V &nbsp; load power " + (I0 * I0 * p.R).toFixed(3) + " W, efficiency " + (100 * p.R / (p.R + re)).toFixed(0) + " % &nbsp; max power " + Pm.toFixed(3) + " W at R = " + re.toFixed(2) + " ohm &nbsp; usable capacity " + cap.toFixed(3) + " Ah, energy " + wh.toFixed(3) + " Wh");
+if (graph !== "cycles") readout("start E = " + E.toFixed(3) + " V (" + slope.toFixed(1) + " mV per decade) &nbsp; r = " + re.toFixed(2) + " ohm &nbsp; I = " + I0.toFixed(3) + " A &nbsp; terminal V = " + v0.toFixed(3) + " V &nbsp; load power " + (I0 * I0 * p.R).toFixed(3) + " W, efficiency " + (100 * p.R / (p.R + re)).toFixed(0) + " % &nbsp; max power " + Pm.toFixed(3) + " W at R = " + re.toFixed(2) + " ohm &nbsp; usable capacity " + cap.toFixed(3) + " Ah, energy " + wh.toFixed(3) + " Wh");
 
   const ch = document.getElementById("challenge");
   if (challengeTest) { const ok = !!challengeTest(p); ch.hidden = false; ch.dataset.ok = String(ok);

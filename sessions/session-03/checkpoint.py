@@ -84,6 +84,41 @@ def run_checks(L):
             if L.pack_runtime_hours(ns, npar, 30.0, 9.0) >= 5.0 and (best is None or ns * npar < best[0]):
                 best = (ns * npar, ns, npar)
     checks.append((f"mini-project reference: smallest pack for a 30 ohm lamp at 9 V or more for 5 h is 10 x 2 = 20 cells (got {best})", best == (20, 10, 2)))
+    # ---- many cycles, capacity fade -------------------------------------------------------------
+    f50 = float(L.capacity_fraction(50))
+    checks.append((f"0.2 percent loss per cycle gives 90.5 percent capacity after 50 cycles (got {100 * f50:.2f} %); a straight-line loss would give 90.0 %",
+                   abs(100 * f50 - 90.5) < 0.05 and abs(1 - 0.002 * 50 - 0.90) < 1e-12 and f50 > 0.90))
+    n80 = L.cycles_to_fraction(0.8)
+    checks.append((f"end of life (80 percent) comes after {n80} cycles: 0.998^111 > 0.8 >= 0.998^112",
+                   n80 == 112 and float(L.capacity_fraction(111)) > 0.8 >= float(L.capacity_fraction(112))))
+    cl = L.cycle_life(10.0, n80)
+    ah0, wh0 = L.usable_capacity_ah(10.0), L.energy_wh(10.0)
+    checks.append(("the cycle-by-cycle simulation follows (1 - loss)^(k - 1) and cycle 1 is the fresh cell",
+                   np.allclose(cl["fraction"], 0.998 ** np.arange(n80)) and abs(cl["ah"][0] - ah0) < 1e-12 and abs(cl["wh"][0] - wh0) < 1e-12))
+    checks.append(("energy over the whole life to 80 percent equals the geometric series wh0 (1 - 0.998^n) / 0.002",
+                   abs(cl["wh"].sum() - wh0 * (1 - 0.998 ** n80) / 0.002) < 1e-9))
+    z = L.cycle_life(10.0, 5, loss=0.0)
+    checks.append(("zero loss: every cycle is identical", np.allclose(z["ah"], ah0) and np.allclose(z["fraction"], 1.0)))
+
+    def aged_capacity(f, R=10.0):
+        """Independent check: an aged cell is the same cell with a solution volume f times smaller."""
+        q = np.linspace(0.0, L.Q_MAX * f * (1 - 1e-4), 20001)
+        xi = q / (L.N_E * L.FARADAY)
+        cz, cc = L.C_ZN0 + xi / (f * L.VOL), np.maximum(L.C_CU0 - xi / (f * L.VOL), 1e-9)
+        e = L.nernst(cz / cc)
+        r = L.R_INT0 * (1 + L.K_DEP * L.C_CU0 / cc)
+        v = e - e / (R + r) * r
+        j = np.nonzero(v < 0.9 * v[0])[0][0]
+        return np.interp(0.9 * v[0], [v[j], v[j - 1]], [q[j], q[j - 1]]) / 3600.0
+    checks.append(("an aged cell behaves like a smaller cell: usable capacity of the 90.5 percent cell matches the independent small-volume calculation to 0.1 percent",
+                   abs(aged_capacity(f50) - ah0 * f50) / (ah0 * f50) < 1e-3))
+    bad = 0
+    for args in ((0.8, -0.1), (0.8, 1.0), (1.2, 0.002)):
+        try:
+            L.cycles_to_fraction(*args)
+        except ValueError:
+            bad += 1
+    checks.append(("a negative loss, a loss of 100 percent and an end-of-life target above 1 are refused", bad == 3))
     return checks
 
 
